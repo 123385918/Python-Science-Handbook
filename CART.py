@@ -18,9 +18,9 @@ class Node:
         self.is_val = None
         self.not_val = None
         self.label = label
-        self.num = 1 ## 用于后续统计该节点为根节点的子树有多少个节点
+        self.leaf_num = 0 ## 该节点拥有的叶节点数目
         self.gt = None
-        self.miss_len = 0 ## 用于后续统计该节为根节点的子树有多少个误分样本
+        #self.miss_len = 0 ## 用于后续统计该节为根节点的子树有多少个误分样本
     def __str__(self):
         return '<d:{},v:{},n:{},is:{},not:{}>'.format(
                 self.dim,self.val,self.num,self.is_val,self.not_val)
@@ -35,7 +35,7 @@ class CART_classify:
         self.min_gini_in_dim = g
         ## 剪枝子树序列
         self.t_seq = []
-        self.alpha = 0
+        self.alpha = np.inf
 
     def _Gini_y_with_x(self, ids):
         if len(ids)==0:return 0
@@ -67,55 +67,49 @@ class CART_classify:
         def _build(ids):
             dim,val,gini_gain = self.max_gini_gain(ids)
             if self.max_gini_gain(ids)[-1]<=self.min_gini_in_dim:
-                return
+                return ## 是否正确？？对于可以完全分类的数据
             node = Node(dim,ids,val)
             node.is_val = _build(ids[self.X[ids,dim]==val])
             node.not_val = _build(ids[self.X[ids,dim]!=val])
             if node.is_val==node.not_val==None:
                 node.label = Counter(self.y[ids]).most_common()[0]
+                node.leaf_num = 1
             else: ## 生成完全二叉树，子节点只可能都None或都有值
-                node.num += node.is_val.num+node.not_val.num
+                node.leaf_num += node.is_val.leaf_num+node.not_val.leaf_num
             return node
             
         self.tree = _build(range(len(self.X)))
         return 'train done!'
 
-    def _miss_len_and_gt(self,node):
-        '''
-        计算node树全部节点的g(T)值，返回新树及最小的g(t)即alpha
-        '''
-        if node.label!=None: ## 叶子节点，不可算gt
-            node.miss_len = sum(self.y[node.ids] != node.label)
-            return
-        else: ## 非叶子节点，可算gt
-            ## 将node子树简化为叶子节点时的误分
-            counter = Counter(self.y[node.ids])
-            Rt = 1-counter.most_common()[1]/len(node.ids)
-            RT = node.miss
-            node.miss_len = self._miss_len(node.is_val) + self._miss_l
-            node.not_val.miss_len = self._miss_len(node.not_val)
-        
     def _g_t(self,node):
         '''
-        计算node树全部节点的g(T)值，返回新树及最小的g(t)即alpha
+        计算node树全部节点误分类个数
         '''
-        stack = [node]
-        while stack:
-            i = stack.pop()
-            if i.is_val and i.not_val:
-                ## 将node子树简化为叶子节点时的误分
-                counter = Counter(self.y[node.ids])
-                i.gt = 1-counter.most_common()[1]/len(node.ids)
-        ## node子树的误分
-        RT = self._g_t(node.is_val)+self._g_t(node.not_val)
-        node.gt = Rt-RT
-        return node
+        if node.label!=None: ## 叶子节点
+            return sum(self.y[node.ids] != node.label) ## 返回误分类点数
+        else: ## 非叶子节点
+            ## 将node子树简化为叶子节点时的误分
+            counter = Counter(self.y[node.ids])
+            Rt = (len(node.ids)-counter.most_common()[1])/len(self.y)
+            ## node子树的误分
+            RT = (self._g_t(node.is_val)+self._g_t(node.not_val))/len(self.y)
+            node.gt = (RT-Rt)/(node.leaf_num-1)
+            self.alpha = min(self.alpha, node.gt)
+            return RT*len(self.y) ## 返回误分类点数
 
-    def _cut(self,alpha,node):
+    def _cut(self,node):
         '''
         将g(t)等于alpha的子树剪掉
         '''
-        pass
+        if node.gt==self.alpha:
+            label = Counter(self.y[node.ids]).most_common()[0]
+            node = Node(dim=None,ids=None,val=None,label = label)
+            node.leaf_num = 1
+            return node
+        node.is_val = self._cut(node.is_val)
+        node.not_val = self._cut(node.not_val)
+        node.leaf_num += node.is_val.leaf_num+node.not_val.leaf_num
+        return node
 
     def prune(self,node):
         if node.is_val==node.not_val==None:
