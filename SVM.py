@@ -37,10 +37,7 @@ class SVC:
         '''
         rst = np.r_[np.flatnonzero((self.alpha<self.C) & (self.alpha>0)),
                     np.flatnonzero((self.alpha==self.C)|(self.alpha==0))]
-        if E1<=0:
-            first = self.E_cache.argmax()
-        else:
-            first = self.E_cache.argmin()
+        first = self.E_cache.argmin() if E1>0 else self.E_cache.argmax()
         firstID = np.flatnonzero(rst==first)[0]
         rst[firstID], rst[0] = rst[0], rst[firstID]
         return rst
@@ -52,9 +49,9 @@ class SVC:
                 '''判断a1，找到a2，优化a2，更新a1a2，更新b，更新E。仅当a1a2均成功更新才重新while'''
                 ## 判断a1
                 E1, a1, y1 = self.E_cache[i], self.alpha[i], self.y[i]
-                if not (((E1*y1<-self.tol) & (a1<self.C))|((E1*y1>self.tol) & (a1>0))): ## KKT
+                self.flag = ((E1*y1<-self.tol) & (a1<self.C))|((E1*y1>self.tol) & (a1>0))
+                if not self.flag: ## 若不违背KKT
                     continue
-                self.flag = True
                 ## 找到a2
                 for j in self.in_order(E1):## 内层循环找a2
                     if j==i:
