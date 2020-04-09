@@ -44,7 +44,6 @@ class SVC:
 
     def train(self):
         while self.flag:
-            self.flag = False
             for i in self.out_order():## 外层循环找a1
                 '''判断a1，找到a2，优化a2，更新a1a2，更新b，更新E。仅当a1a2均成功更新才重新while'''
                 ## 判断a1
@@ -103,8 +102,9 @@ if __name__ == '__main__':
     df = pd.DataFrame(iris.data, columns=iris.feature_names).iloc[:100,:2]
     y = np.where(iris.target[:100]>0,-1.0,1.0)
     # train model
-    svc2 = SVC(df.values,y,C=10,tol=.001)
+    svc2 = SVC(df.values,y,C=100,tol=.001)
     svc2.train()
+    # visialize
     w,b = svc2.w,svc2.b
     df.plot.scatter(x='sepal length (cm)',y='sepal width (cm)',c=y,cmap='Spectral',title = 'C=%s'%svc2.C)
     plt.plot(df.iloc[:,0],-(df.iloc[:,0]*w[0]+b)/w[1])
@@ -126,5 +126,4 @@ if __name__ == '__main__':
         所以alpha=0和alpha=C这两个KKT条件，被分别放在两个式子中判断了，
         0<alpha<C也被分成了两部分，这样三个条件就都有了判断
     '''
-
 
