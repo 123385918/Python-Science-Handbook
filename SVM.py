@@ -68,7 +68,7 @@ class SVC:
                         continue
                     a2_new = np.clip(a2 + y2*(E1-E2)/eta, L, H).round(self.eps)
                     ## 更新a1,a2
-                    if abs(a2_new-a2)==0:
+                    if a2_new==a2:
                         print('a2 changed too little')
                         continue
                     a1_new = np.round(a1+y1*y2*(a2-a2_new), self.eps)
