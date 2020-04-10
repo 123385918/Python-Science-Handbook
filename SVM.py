@@ -106,8 +106,11 @@ if __name__ == '__main__':
     svc2.train()
     # visialize
     w,b = svc2.w,svc2.b
-    df.plot.scatter(x='sepal length (cm)',y='sepal width (cm)',c=y,cmap='Spectral',title = 'C=%s'%svc2.C)
-    plt.plot(df.iloc[:,0],-(df.iloc[:,0]*w[0]+b)/w[1])
+    df.plot.scatter(x='sepal length (cm)',y='sepal width (cm)',c=y,
+                    cmap='Spectral',title='C=%s'%svc2.C,colorbar=False)
+    plt.plot(df.iloc[:,0],-(df.iloc[:,0]*w[0]+b)/w[1],'r')
+    plt.plot(df.iloc[:,0],-(df.iloc[:,0]*w[0]+b-1)/w[1],'g')
+    plt.plot(df.iloc[:,0],-(df.iloc[:,0]*w[0]+b+1)/w[1],'g')
     for i in np.flatnonzero(svc2.alpha>0):
         plt.gcf().gca().add_artist(plt.Circle((df.iloc[i,0], df.iloc[i,1]), .05, color='y', fill=False))
 
