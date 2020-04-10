@@ -13,14 +13,8 @@ class SVC:
         self.alpha = np.zeros_like(self.y,dtype = float) ## 初始设置全部样本点都是非支持向量
         self.Gram = self.X.dot(self.X.T) ## 普通时用gram矩阵，加核时换成核矩阵
         self.b,self.w = 0, 0
-        self.E_cache = np.array([self.E(i) for i in self.N]) ## 存储预测偏差
+        self.E_cache = (self.alpha*self.y).dot(self.Gram)+self.b-self.y ## E(i)=g(i)-y(i)
         self.flag = True ## 数据集有违反KKT条件的标识
-        
-    def E(self,i):
-        '''计算E(i) = g(i) - y(i)'''
-        gi = (self.alpha * self.y).dot(self.Gram[:,i]) + self.b
-        yi = self.y[i]
-        return gi-yi
     
     def out_order(self):
         '''用于外部循环找到a1。根据当前alpha和C，返回重排序后的index。
@@ -83,7 +77,7 @@ class SVC:
                     else:
                         self.b = (b1_new+b2_new)/2
                     ## 更新E
-                    self.E_cache = np.array([self.E(i) for i in self.N])
+                    self.E_cache = (self.alpha*self.y).dot(self.Gram)+self.b-self.y
                     break
                 else:
                     continue
