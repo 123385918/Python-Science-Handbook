@@ -13,11 +13,13 @@ fx = Σαi*gix
 fm+1 = fm + α*g, α，g是第m+1轮的值
 损失函数
 L = e^(-y*f(x))
-将fm+1 = fm + α*g代入，将g用训练数据选好代入，再对α求导使其等于0，求得α=1/2*ln(1/em-1)
 其中em是分类误差率
 算法迭代
+初始化训练集权重w，用w权重下的训练集求出最佳基分类器g及其分类误差率e（w加权）。
+将fm+1 = fm + α*g代入L，将g用训练数据选好代入，L对α求导使其等于0，求得α=1/2*ln(1/e-1)
 fm+1 = fm + α*g，α和g均为上述所求，得到fm+1
-依次迭代知道分错率达标或学习器数量达限。
+更新w = w*np.exp(-α*y*y_hat)用于下次求最佳基分类器。
+依次迭代直到分错率达标或学习器数量达限。
 '''
 class Node:
     def __init__(self,v,d):
@@ -56,7 +58,7 @@ class BaseCART:
         def bulid(ids,level):
             dim,val,gini = self.gini(X[ids],y[ids],w[ids])
             if (level==self.max_depth) or (gini==0):
-                label = list(zip(*np.unique(y[ids],return_counts=True)))
+                label = zip(*np.unique(y[ids],return_counts=True))
                 return max(label,key=lambda x:x[1])[0]
             else:
                 node = Node(val,dim)
@@ -66,16 +68,15 @@ class BaseCART:
         return bulid(np.arange(len(y)),0)
 
 
-
 class AdaBoost:
     def __init__(self, X, y, error = 0,n = 50):
         self.X = X
         self.y = y
         self.error = error ## 误判个数
-        self.n = n
+        self.n = n ## 最大分类器个数
 
     def train(self, max_depth = 2):
-        self.w = np.ones_like(self.y,dtype=float)/len(self.y)
+        self.w = np.repeat(1/len(self.y),len(self.y))
         self.G = []
         self.alpha = []
         error = len(self.y)
@@ -87,10 +88,9 @@ class AdaBoost:
             self.alpha.append(alpha)
             self.G.append(G)
             error = (np.array([self.pred(x) for x in self.X])!=self.y).sum()
-            print(error)
-            self.w = self.w*np.exp(-alpha*self.y*y_hat)
+            print(error) ## 打印当前组合函数判错个数
+            self.w *= np.exp(-alpha*self.y*y_hat)
             self.w /= self.w.sum()
-        self.alpha = np.array(self.alpha).round(4)
         return 'train done!'
 
     def pred0(self,tree,x):
@@ -109,15 +109,21 @@ if __name__ == '__main__':
     import pandas as pd
     import numpy as np
     from sklearn.datasets import load_iris
-    import matplotlib.pyplot as plt
     # load data
     iris = load_iris()
     df = pd.DataFrame(iris.data, columns=iris.feature_names).iloc[:100,:2]
     y = np.where(iris.target[:100]>0,-1.0,1.0)
     # train model
-    adaboost = AdaBoost(df.values,y)
-    adaboost.train()
+    ab = AdaBoost(df.values,y)
+    ab.train()
     # visialize
-    pred = np.array([adaboost.pred(x) for x in adaboost.X])
+    pred = np.array([ab.pred(x) for x in ab.X])
     df.plot.scatter(x='sepal length (cm)',y='sepal width (cm)',c=(y==pred),
-                    cmap='Spectral',title='alpha:%s'%adaboost.alpha,colorbar=False)
+                    cmap='Spectral',title='alpha:%s'%ab.alpha,colorbar=False)
+    # 李航
+    X = np.arange(10).reshape(-1,1)
+    y = np.repeat([1,-1,1,-1],[3,3,3,1])
+    # train model
+    ab = AdaBoost(X,y)
+    ab.train(max_depth=1)
+    print(ab.alpha) ## 与李航例题结果相同
