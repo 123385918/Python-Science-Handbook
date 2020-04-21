@@ -17,6 +17,9 @@ GBDT的思想可以用一个通俗的例子解释，假如有个人30岁，
 从上面的例子看这个思想还是蛮简单的，但是有个问题是这个损失的拟合不好度量，
 损失函数各种各样，怎么找到一种通用的拟合方法呢？
 大牛Freidman提出了用损失函数的负梯度来拟合本轮损失的近似值，进而拟合一个CART回归树。
+对于以MSE为损失函数的回归问题，负梯度就是残差。
+对于以指数损失函数的分类问题，GBDT就是adaboost（参见adaboost损失函数求导）。
+还有其他损失函数，详见刘建平相关博客和sklearn文档。
 '''
 class Node:
     def __init__(self,v,d):
@@ -25,8 +28,8 @@ class Node:
         self.left = None ## 小于等于放左边
         self.right = None ## 大于放右边
 
+        
 class BaseRT:
-
     def __init__(self,max_depth=1):
         self.max_depth = max_depth
 
@@ -90,20 +93,7 @@ class GBDT:
 
 if __name__ == '__main__':
 
-    import pandas as pd
     import numpy as np
-    from sklearn.datasets import load_iris
-    # load data
-    iris = load_iris()
-    df = pd.DataFrame(iris.data, columns=iris.feature_names).iloc[:100,:2]
-    y = np.where(iris.target[:100]>0,-1.0,1.0)
-    # train model
-    ab = GBDT(df.values,y)
-    ab.train()
-    # visialize
-    pred = np.array([ab.pred(x) for x in ab.X])
-    df.plot.scatter(x='sepal length (cm)',y='sepal width (cm)',c=(y==pred),
-                    cmap='Spectral',title='alpha:%s'%ab.alpha,colorbar=False)
     # 李航
     X = np.arange(1,11,dtype=float).reshape(-1,1)
     y = np.array([5.56,5.7,5.91,6.4,6.8,7.05,8.9,8.7,9.0,9.05])
