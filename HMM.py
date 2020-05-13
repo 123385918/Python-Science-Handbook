@@ -62,10 +62,10 @@ class HMM:
         dp[0] = self.π*self.B[:,O[0]]
         for i in range(1,len(O)):
             tmp = dp[i-1,:,None]*self.A
-            dp[i-1] = np.argmax(tmp,axis=0)
+            dp[i-1] = np.argmax(tmp,axis=0) ## 记下Ψ
             dp[i] = np.max(tmp,axis=0)*self.B[:,O[i]]
         path = [dp[i].argmax()]
-        for i in range(len(O)-2,-1,-1):
+        for i in range(len(O)-2,-1,-1): ## 回溯
             path.append(int(dp[i,path[-1]]))
         return path[::-1], dp[-1].max()
     
@@ -91,7 +91,9 @@ class HMM:
             [epd(p*self.A[s,n]*self.B[n,O[i+1]],i+1,n) for n in range(self.N)]
         [epd(self.π[n]*self.B[n,O[0]], 0, n) for n in range(self.N)]
         return self.rst
+
 if __name__=='__main__':
+    import pandas as pd
     Q = [1, 2, 3]
     V = [1, 0] ## 0:红 1:白
     A = np.array([[0.5, 0.2, 0.3],
@@ -115,4 +117,5 @@ if __name__=='__main__':
     hmm.em_fit(O,N=2,maxiter=20)
     pd.DataFrame(hmm.p,columns=['P(O|λ)']).plot(y='P(O|λ)')
     ## 问题三--隐状态预测
-    
+    hmm = HMM(A,B,π)
+    hmm.dp_pred(O) ## ([2, 2, 2], 0.01467) 与李航结果相同
