@@ -17,17 +17,57 @@ class HMM:
         self.π = π
         self.N = len(π) ## 隐藏态个数
     
-    def forward(self,O):
+    def forward(self,O,record = False):
         α = self.π*self.B[:,O[0]]
+        α_T = [α.tolist()]
         for t in range(1,len(O)):
             α = α.dot(self.A)*self.B[:,O[t]]
-        return α.sum()
+            if record: α_T.append(α.tolist())
+        return np.array(α_T) if record else α.sum()
     
-    def backward(self,O):
+    def backward(self,O,record = False):
         β = np.ones_like(self.π,dtype=float)
+        β_T = [β.tolist()]
         for t in range(len(O)-2,-1,-1):
             β = np.dot(self.A*self.B[:,O[t+1]],β)
-        return np.dot(self.π*self.B[:,O[0]],β)
+            if record: β_T.append(β.tolist())
+        return np.array(β_T[::-1]) if record else np.dot(self.π*self.B[:,O[0]],β)
+    
+    def em_fit(self,O,N,maxiter=50): ## O：观测序列 N：隐状态个数
+        V = np.unique(O)
+        self.A = np.ones([N,N])/N
+        self.B = np.ones([N,len(V)])/len(V)
+        self.π = np.random.sample(N)
+        self.π /= self.π.sum()
+        self.p = [0]
+        T_V = (O[:,None]==V).astype(int) ## T行V列的one-hot矩阵
+        while len(self.p)<=maxiter:
+            ## e_step：求当前参数下使Q函数导数为0时，有用部分的值
+            T_α = self.forward(O, record = True)
+            T_β = self.backward(O, record = True)
+            ## m_step：根据e_step得到的值，按照解析解更新Q函数参数
+            T_αβ = T_α*T_β
+            self.A *= T_α[:-1].T.dot(T_β[1:]*self.B[:,O[1:]].T)/T_αβ[:-1].sum(0)[:,None]
+            self.B = T_αβ.T.dot(T_V) / T_αβ.sum(0)[:,None]
+            self.π = T_αβ[0] / T_αβ[0].sum(0)
+            ## 记录当前λ下的O的概率
+            self.p.append(T_αβ[0].sum())
+        return 'train done!'
+    
+    def dp_pred(self,O):
+        '''dp数组定义:dp[t,i]定义为，t时的状态为i的1~t个状态的最大概率。
+           递推条件：dp[t,i] = max(dp[t-1,:]*A[:,i])*B[i,O[t]]
+        '''
+        dp = np.zeros((len(O),self.N))
+        dp[0] = self.π*self.B[:,O[0]]
+        for i in range(1,len(O)):
+            tmp = dp[i-1,:,None]*self.A
+            dp[i-1] = np.argmax(tmp,axis=0)
+            dp[i] = np.max(tmp,axis=0)*self.B[:,O[i]]
+        path = [dp[i].argmax()]
+        for i in range(len(O)-2,-1,-1):
+            path.append(int(dp[i,path[-1]]))
+        return path[::-1], dp[-1].max()
     
     def eval_prob_direct(self,O):
         rst = 0
@@ -51,7 +91,6 @@ class HMM:
             [epd(p*self.A[s,n]*self.B[n,O[i+1]],i+1,n) for n in range(self.N)]
         [epd(self.π[n]*self.B[n,O[0]], 0, n) for n in range(self.N)]
         return self.rst
-    
 if __name__=='__main__':
     Q = [1, 2, 3]
     V = [1, 0] ## 0:红 1:白
@@ -65,9 +104,15 @@ if __name__=='__main__':
                   0.4,
                   0.4])
     # O = ['红', '白', '红']
-    O = [0, 1, 0]
+    O = np.array([0, 1, 0])
     hmm = HMM(A,B,π)
+    ## 问题一--观测概率
     hmm.backward(O) ## 0.130218
     hmm.forward(O) ## 0.130218
     hmm.eval_prob_direct(O) ## 0.130218
     hmm.eval_prob_direct2(O) ## 0.13021800000000003
+    ## 问题二--参数估计
+    hmm.em_fit(O,N=2,maxiter=20)
+    pd.DataFrame(hmm.p,columns=['P(O|λ)']).plot(y='P(O|λ)')
+    ## 问题三--隐状态预测
+    
