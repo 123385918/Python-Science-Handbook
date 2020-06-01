@@ -9,10 +9,11 @@ sigmod = lambda x: 1/(1+np.exp(-x))
 
 
 class DNN:
-    
+    '''隐藏层均为sigmod激活函数
+       sizes[5,4,2,1]:输入层5个元，隐藏层有2层，隐1有4个元，隐2有2个元，输出层1个元'''
     def initial(self,sizes):
         self.B = [np.random.rand(b) for b in sizes[1:]]
-        self.W = [np.random.rand(w2,w1) for w1,w2 in zip(sizes[:-1],sizes[1:])]
+        self.W = [np.random.rand(w2,w1) for w1,w2 in zip(sizes[:-1],sizes[1:])] ## W:nrows:输出，ncols:输入
     
     def __init__(self,sizes):
         self.initial(sizes)
