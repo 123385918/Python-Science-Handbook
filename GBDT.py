@@ -49,7 +49,7 @@ class BaseRT:
     def train(self,X,y):
         def bulid(ids,level):
             if level==self.max_depth:
-                return y[ids].mean()
+                return y[ids].mean() ## 当损失函数是MSE，c就是均值
             else:
                 dim,val,mse = self.mse(X[ids],y[ids])
                 node = Node(val,dim)
