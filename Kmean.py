@@ -15,17 +15,17 @@ class Kmean:
             centers = self.X[np.random.choice(self.X.shape[0],k, replace=False)]
         
         ## 训练类中心
-        loss = []
-        while len(loss) < self.maxiter:
-            
+        losses = []
+        while len(losses) < self.maxiter:
             dist = self.dist(centers) ## k*m
-            
             cluster_id = dist.argmin(axis=0) ## m*1
-            
-            centers = self.agg(cluster_id, np.mean)
-            
-            loss.append(self.agg(cluster_id, np.var))
-            
-        return cluster_id
-    
+            loss = self.agg(cluster_id, lambda x: len(x)*x.var(ddof=0)).sum()
+            losses.append(loss)
+        else:
+            self.centers = self.agg(cluster_id, np.mean) ## k*m
+            return 'train done!'
+        
     def predict(self,X):
+        dist = np.linalg.norm(X[None,:] - self.centers[:,None], axis=2) ## k*m
+        cluster_id = dist.argmin(axis=0) ## m*1
+        return cluster_id
